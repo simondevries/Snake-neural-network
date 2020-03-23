@@ -22,7 +22,7 @@ def rand_color():
 class Snake(object):
     def __init__(self, direction=DIRECTIONS.Right, 
             point=(0, 0, rand_color()), color=None):
-        self.tailmax = 4
+        self.tailmax = 20
         self.direction = direction 
         self.deque = deque()
         self.deque.append(point)
@@ -176,11 +176,13 @@ def is_food(board, point):
 
 
 def get_distance_to_wall(snake):
-    # n = snake.deque[0][0] - 0
-    # e = 
-    # s = 
+    n = snake.deque[-1][1] - 0
+    e = snake.deque[-1][0] - BOARD_LENGTH
+    s = snake.deque[-1][1] - BOARD_LENGTH
+    w = snake.deque[-1][0] - 0
     # w = 
-    print('')
+    print('WALL:', str(n), str(e), str(s),str(w))
+    return (n,e,s,w)
     # print(''+snake.deque[0][0] + ',' + snake.deque[0][1])
     # print(''+food)
     # self.sn
@@ -192,7 +194,64 @@ def get_distance_to_food(snake, food):
 
     print(''+str(n) + ',' + str(e))
     # print(''+food)
+    return (n, e)
     # self.sn
+
+
+def get_distance_to_snake(spots, snake):
+    headX = snake.deque[-1][1]
+    headY = snake.deque[-1][0]
+
+    print("headX", str(headX))
+    print("headY", str(headY))
+
+    n = 99
+    e = 99
+    s = 99
+    w = 99
+
+
+    for x in range(headX + 1, 30):
+        # print("if x", str(x), 'y', str(headY))
+        if spots[headY][x] == 1:
+            # print('true')
+            e = x - headX
+            break;
+
+    for x in range(headX - 1, 0, -1):
+        # print("if x", str(x), 'y', str(headY))
+        if spots[headY][x] == 1:
+            # print('true')
+            w = headX - x
+            break;
+
+    for y in range(headY + 1, 30):
+        # print("if x", str(headX), 'y', str(y))
+        if spots[y][headX] == 1:
+            # print('true')
+            s = y - headY
+            break;
+
+    for y in range(headY - 1, 0, -1):
+        # print("if x", str(headX), 'y', str(y))
+        if spots[y][headX] == 1:
+            # print('true')
+            n = headY - y
+            break;
+
+    if(snake.direction == DIRECTIONS.Up):
+        s = 99
+
+    elif(snake.direction == DIRECTIONS.Down):
+        n = 99
+
+    elif(snake.direction == DIRECTIONS.Left):
+        e = 99
+
+    elif(snake.direction == DIRECTIONS.Right):
+        w = 99
+
+    print('n',str(n),'s',str(s),'e',str(e),'w', str(w))
 
 # Return false to quit program, true to go to
 # gameover screen
@@ -206,7 +265,7 @@ def one_player(screen):
     food = find_food(spots)
     # print(''+food[0])
     while True:
-        clock.tick(1)
+        clock.tick(4)
         # Event processing
         done = False
         events = pygame.event.get()
@@ -218,14 +277,18 @@ def one_player(screen):
         if done:
             return False
 
+
+
+        dWall = get_distance_to_wall(snake)
+        dFood = get_distance_to_food(snake, food)
+        dSnake = get_distance_to_snake(spots, snake)
+
         snake.populate_nextDir(events, "arrows")
 
-        # Game logic
-
-        get_distance_to_wall(snake)
-        get_distance_to_food(snake, food)
-
         next_head = move(snake)
+
+        
+        
         if (end_condition(spots, next_head)):
             return snake.tailmax
 
