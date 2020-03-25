@@ -2,7 +2,9 @@ from collections import deque, namedtuple
 import random
 import pygame
 import socket
-from brain import createBrain, networkThink
+from brain import createBrain, networkThink, mutateBrain
+from directions import DIRECTIONS
+
 import select
 
 BOARD_LENGTH = 32
@@ -13,16 +15,13 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 
 
-DIRECTIONS = namedtuple('DIRECTIONS',
-        ['Up', 'Down', 'Left', 'Right'])(0, 1, 2, 3)
-
 def rand_color():
     return (155|155|155)
 
 class Snake(object):
     def __init__(self, direction=DIRECTIONS.Right, 
-            point=(0, 0, rand_color()), color=None):
-        self.tailmax = 20
+            point=(15, 15, rand_color()), color=None):
+        self.tailmax = 4
         self.direction = direction 
         self.deque = deque()
         self.deque.append(point)
@@ -69,11 +68,13 @@ def find_food(spots):
     return food
 
 
-def end_condition(board, coord):
+def end_condition(board, coord, movesLeft):
     if (coord[0] < 0 or coord[0] >= BOARD_LENGTH or coord[1] < 0 or
             coord[1] >= BOARD_LENGTH):
         return True
     if (board[coord[0]][coord[1]] == 1):
+        return True
+    if (movesLeft <= 0):
         return True
     return False
 
@@ -176,39 +177,39 @@ def is_food(board, point):
 
 
 def get_distance_to_wall(snake):
-    n = snake.deque[-1][1] - 0
-    e = snake.deque[-1][0] - BOARD_LENGTH
-    s = snake.deque[-1][1] - BOARD_LENGTH
-    w = snake.deque[-1][0] - 0
+    n = (snake.deque[-1][1] - 0)/30
+    e = (snake.deque[-1][0] - BOARD_LENGTH)/30
+    s = (snake.deque[-1][1] - BOARD_LENGTH)/30
+    w = (snake.deque[-1][0] - 0)/30
     # w = 
-    print('WALL:', str(n), str(e), str(s),str(w))
-    return (n,e,s,w)
+    # print('WALL:', str(n), str(e), str(s),str(w))
+    return (n,s,e,w)
     # print(''+snake.deque[0][0] + ',' + snake.deque[0][1])
     # print(''+food)
     # self.sn
 
 def get_distance_to_food(snake, food):
-    n = snake.deque[-1][1] - food[1]
-    e = snake.deque[-1][0] - food[0]
+    n = (snake.deque[-1][1] - food[1])/30
+    e = (snake.deque[-1][0] - food[0])/30
 
 
-    print(''+str(n) + ',' + str(e))
+    # print(''+str(n) + ',' + str(e))
     # print(''+food)
     return (n, e)
     # self.sn
 
 
 def get_distance_to_snake(spots, snake):
-    headX = snake.deque[-1][1]
-    headY = snake.deque[-1][0]
+    headX = (snake.deque[-1][1])
+    headY = (snake.deque[-1][0])
 
-    print("headX", str(headX))
-    print("headY", str(headY))
+    # print("headX", str(headX))
+    # print("headY", str(headY))
 
-    n = 99
-    e = 99
-    s = 99
-    w = 99
+    n = 30
+    e = 30
+    s = 30
+    w = 30
 
 
     for x in range(headX + 1, 30):
@@ -240,32 +241,36 @@ def get_distance_to_snake(spots, snake):
             break;
 
     if(snake.direction == DIRECTIONS.Up):
-        s = 99
+        s = 30
 
     elif(snake.direction == DIRECTIONS.Down):
-        n = 99
+        n = 30
 
     elif(snake.direction == DIRECTIONS.Left):
-        e = 99
+        e = 30
 
     elif(snake.direction == DIRECTIONS.Right):
-        w = 99
+        w =30
 
-    print('n',str(n),'s',str(s),'e',str(e),'w', str(w))
+    # print('n',str(n),'s',str(s),'e',str(e),'w', str(w))
+
+    return (n/30,s/30,e/30,w/30)
 
 # Return false to quit program, true to go to
 # gameover screen
-def one_player(screen): 
+def one_player(screen, brain): 
     clock = pygame.time.Clock()
     spots = make_board()
-
+    movesLeft = 200
+    movesTaken =0
     snake = Snake()
+    score = 0
     # Board set up
     spots[0][0] = 1
     food = find_food(spots)
     # print(''+food[0])
     while True:
-        clock.tick(4)
+        clock.tick(200)
         # Event processing
         done = False
         events = pygame.event.get()
@@ -283,18 +288,24 @@ def one_player(screen):
         dFood = get_distance_to_food(snake, food)
         dSnake = get_distance_to_snake(spots, snake)
 
+        direction = networkThink(brain, snake.direction, dWall, dFood, dSnake)
+        snake.nextDir.appendleft(direction)
+        movesLeft = movesLeft - 1
+        movesTaken = movesTaken + 1
+        score += 1
         snake.populate_nextDir(events, "arrows")
 
         next_head = move(snake)
-
         
         
-        if (end_condition(spots, next_head)):
-            return snake.tailmax
+        if (end_condition(spots, next_head, movesLeft)):
+            return score
 
         if is_food(spots, next_head):
             snake.tailmax += 4
             food = find_food(spots)
+            score += 100
+            movesLeft + 100
 
         snake.deque.append(next_head)
 
@@ -442,9 +453,46 @@ def main():
     pygame.draw.rect(screen,pygame.Color(255,255,255,255),pygame.Rect(50,50,10,10))
     first = True
     playing = True
-    one_player(screen)
+    highestScoreSoFar = 20
+    bonusStrength = 0
+    brain = createBrain()
+    goodBrain = brain
+    crazyGens = 3
+    genNum =0
+    numInGen = 15
+
+    while True:
+        genNum = genNum + 1
+        print('new gen', str(genNum))
+        brain = goodBrain
+        numInGen = min(numInGen + 5, 40)
+        crazyGens = crazyGens -1
+        print("High score:", str(highestScoreSoFar))
+        
+        for x in range(0, numInGen):
+            if crazyGens == 5:
+                brain = mutateBrain(brain, 0.5)
+            if crazyGens >= 0 and crazyGens < 5:
+                brain = mutateBrain(brain, 0.1)
+            if crazyGens < 0:
+                brain = mutateBrain(brain, 0.01)
+
+            score = one_player(screen, brain)
+            # amountToMutate = ((highestScoreSoFar/movesLasted)**2)/10
+            # amountToMutate = min(amountToMutate, 0.10)
+            # amountToMutate = amountToMutate - ((bonusStrength/7) * 0.7)
+            # amountToMutate = max(amountToMutate, 0.005)
+            # bonusStrength = max(bonusStrength -1, 0)
+            # struggle = struggle + 1
+            #fail
+            if (score >= highestScoreSoFar):
+                goodBrain = brain
+            
+            highestScoreSoFar = max(score, highestScoreSoFar)
+
+        # print('Mutating')
     # next
-    one_player(screen)
+    # one_player(screen, brain)
 
     # while playing:
     #     pick = menu(screen)

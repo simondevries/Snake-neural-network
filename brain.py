@@ -2,6 +2,7 @@
 
 # first neural network with keras make predictions
 import numpy
+from directions import DIRECTIONS
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.utils.vis_utils import plot_model
@@ -52,28 +53,61 @@ import random
 
 
 def createBrain():
-    print("createbrain")
-    # model = Sequential()
+    model = Sequential()
     # # input_dim is number nodes
-    # model.add(Dense(8, input_dim=3, activation='sigmoid'))
-    # model.add(Dense(2, activation='softmax'))
+    model.add(Dense(18, input_dim=11, activation='sigmoid'))
+    # model.add(Dense(18, activation='sigmoid'))
+    model.add(Dense(4, activation='softmax'))
 
-    # return model
+    return model
 
 
 
-def networkThink():
-    print("network think")
+def networkThink(model, snakeDirection, dWall, dFood, dSnake):
+    # print("network think")
     
+    snakeDirectionNormalized = (snakeDirection / 2) - 1
+    # print("snakeDirectionNormalized:", str(snakeDirectionNormalized))
     #model, distaceToFood, distanceToFood, distanceToSelf):
-    # inputs = numpy.array([[dtc, vv, dtp]])
+    inputs = numpy.array([[snakeDirectionNormalized, dWall[0],dWall[1],dWall[2],dWall[3],dFood[0],dFood[1], dSnake[0], dSnake[1], dSnake[2], dSnake[3]]])
 
-    # predictions = model.predict(inputs)
-    # # print("1" + predictions)
-    # # predictionsTwo = numpy.asarray(predictions, dtype=float)
+    predictions = model.predict(inputs)
+    # print("1" + predictions)
+    predictionsTwo = numpy.asarray(predictions, dtype=float)
     # # print("2" + predictionsTwo)
-    # # print("3" + predictions[1])
+    # print("1" + predictionsTwo[0])
+    # print("2" + predictionsTwo[1])
+    # print("3" + predictionsTwo[2])
+    # print("4" + predictionsTwo[3])
     # # print(predictionsTwo[0][0])
-    # # print(predictionsTwo[0][0] + ':' + predictionsTwo[0][1])
-    # return predictions[0][0] > predictions[0][1]
 
+    if (predictionsTwo[0][0] >= max(predictionsTwo[0][1],predictionsTwo[0][2],predictionsTwo[0][3])):
+        # print("down")
+        return DIRECTIONS.Down #which one???
+
+    elif (predictionsTwo[0][1] >= max(predictionsTwo[0][0],predictionsTwo[0][2],predictionsTwo[0][3])):
+        # print("up")
+        return DIRECTIONS.Up #which one???
+
+    elif (predictionsTwo[0][2] >= max(predictionsTwo[0][0],predictionsTwo[0][1],predictionsTwo[0][3])):
+        # print("left")
+        return DIRECTIONS.Left #which one???
+
+    elif (predictionsTwo[0][3] >= max(predictionsTwo[0][0],predictionsTwo[0][1],predictionsTwo[0][2])):
+        # print("right")
+        return DIRECTIONS.Right #which one???
+
+def mutateBrain(modelBrain, amount):
+    weights = modelBrain.get_weights()
+    newBrain = createBrain()
+    # print(weights)
+    
+    for i in range(len(weights)):
+        if (i % 2 is 0):
+            for j in range(len(weights[i])):
+                    for k in range(len(weights[i][j])):
+                        newVal = weights[i][j][k] + random.gauss(0, amount)
+                        weights[i][j][k] = newVal
+    # print(weights)
+    newBrain.set_weights(weights)
+    return newBrain
