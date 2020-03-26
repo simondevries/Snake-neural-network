@@ -19,8 +19,21 @@ def rand_color():
     return (155|155|155)
 
 class Snake(object):
-    def __init__(self, direction=DIRECTIONS.Right, 
+    def __init__(self, direction=DIRECTIONS.Left, 
             point=(15, 15, rand_color()), color=None):
+
+        selector = random.randrange(4)
+        if (selector == 0):
+            direction =DIRECTIONS.Down
+        elif selector ==1:
+            direction =DIRECTIONS.Up
+
+        elif selector == 2:
+            direction =DIRECTIONS.Left
+
+        elif selector == 3:
+            direction =DIRECTIONS.Right
+        
         self.tailmax = 4
         self.direction = direction 
         self.deque = deque()
@@ -177,25 +190,73 @@ def is_food(board, point):
 
 
 def get_distance_to_wall(snake):
-    n = (snake.deque[-1][1] - 0)/30
-    e = (snake.deque[-1][0] - BOARD_LENGTH)/30
-    s = (snake.deque[-1][1] - BOARD_LENGTH)/30
-    w = (snake.deque[-1][0] - 0)/30
+    n = ((snake.deque[-1][1] - 0)/15) -1
+    e = ((snake.deque[-1][0] - BOARD_LENGTH)/15) -1
+    s = ((snake.deque[-1][1] - BOARD_LENGTH)/15) -1
+    w = ((snake.deque[-1][0] - 0)/15) - 1
+
+# 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+# 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    #these will be 0 on the boarder yikes
+    se = 0
+    ne = 0
+    sw = 0
+    nw = 0
+
+    count = 0
+    for v in range(snake.deque[-1][1], 31):
+        count = count + 1
+        if snake.deque[-1][0] + count <= 31:
+            se = ((count) / 15) - 1
+    
+    count =0
+    for v in range(snake.deque[-1][1], -1, -1):
+        count = count + 1
+        if snake.deque[-1][0] + count <= 31:
+            ne = ((count) / 15) - 1
+    
+    count =0
+    for v in range(snake.deque[-1][1], -1, -1):
+        count = count + 1
+        if snake.deque[-1][0] - count >= 0:
+            nw = ((count) / 15) - 1
+    
+    count =0
+    for v in range(snake.deque[-1][1], 31):
+        count = count + 1
+        if snake.deque[-1][0] - count >= 0:
+            sw = ((count) / 15) - 1
+
+    # print("*", str(se), ",", str(sw), ",", str(nw), ",", str(ne))
     # w = 
     # print('WALL:', str(n), str(e), str(s),str(w))
-    return (n,s,e,w)
+    return (n,s,e,w, se, sw, nw, ne)
     # print(''+snake.deque[0][0] + ',' + snake.deque[0][1])
     # print(''+food)
     # self.sn
 
 def get_distance_to_food(snake, food):
-    n = (snake.deque[-1][1] - food[1])/30
-    e = (snake.deque[-1][0] - food[0])/30
+    n = 1
+    e = 1
+    s = 1
+    w = 1
 
+    if (snake.deque[-1][1] - food[1]) > 0: 
+        w =(abs(snake.deque[-1][1] - food[1])/15) -1 
 
-    # print(''+str(n) + ',' + str(e))
+    if (snake.deque[-1][1] - food[1]) < 0: 
+        e =(abs(food[1] - snake.deque[-1][1])/15) -1 
+
+    if (snake.deque[-1][0] - food[0]) > 0: 
+        n =(abs(food[0] - snake.deque[-1][0])/15) -1 
+
+    if (snake.deque[-1][0] - food[0]) < 0: 
+        s =(abs(snake.deque[-1][0] - food[0])/15) -1 
+    # print('n'+str(n) + ', s' + str(s) + ",e" + str(e) + ", w" + str(w))
     # print(''+food)
-    return (n, e)
+
+
+    return (n, s, e, w)
     # self.sn
 
 
@@ -258,13 +319,14 @@ def get_distance_to_snake(spots, snake):
 
 # Return false to quit program, true to go to
 # gameover screen
-def one_player(screen, brain): 
+def one_player(screen, brain, genNum): 
     clock = pygame.time.Clock()
     spots = make_board()
     movesLeft = 200
     movesTaken =0
     snake = Snake()
     score = 0
+    apples = 0
     # Board set up
     spots[0][0] = 1
     food = find_food(spots)
@@ -299,13 +361,22 @@ def one_player(screen, brain):
         
         
         if (end_condition(spots, next_head, movesLeft)):
-            return score
+            #TAKEN from some youtube video
+            return score+(2**apples+(apples**2.1)*500)-(apples**1.2*(0.25*score)**1.3)
+
+            # return len(snake.deque)**2 * score
 
         if is_food(spots, next_head):
-            snake.tailmax += 4
-            food = find_food(spots)
-            score += 100
-            movesLeft + 100
+            if (genNum > 12):
+                snake.tailmax += 4
+                food = find_food(spots)
+                movesLeft += 200
+                apples = apples + 1
+            else:
+                print('Not giving point for food as less than gen 20')
+
+            # score += 100
+            # movesLeft + 100
 
         snake.deque.append(next_head)
 
@@ -459,25 +530,32 @@ def main():
     goodBrain = brain
     crazyGens = 3
     genNum =0
-    numInGen = 15
-
+    noChange = 0
+    numInGen = 30
+    prevHighScore = 0
+    prevPrevHighScore = 0
+    # mutationAmount - 0.08
     while True:
         genNum = genNum + 1
         print('new gen', str(genNum))
-        brain = goodBrain
         numInGen = min(numInGen + 5, 40)
-        crazyGens = crazyGens -1
         print("High score:", str(highestScoreSoFar))
         
         for x in range(0, numInGen):
-            if crazyGens == 5:
-                brain = mutateBrain(brain, 0.5)
-            if crazyGens >= 0 and crazyGens < 5:
-                brain = mutateBrain(brain, 0.1)
-            if crazyGens < 0:
-                brain = mutateBrain(brain, 0.01)
+            # if genNum < 5:
+            #     brain = mutateBrain(goodBrain, 0.08)
+            # elif highestScoreSoFar - prevPrevHighScore == 0:
+            #     mutationAmount = min(0.08, 0.03 + (noChange * 0.01))
+            #     brain = mutateBrain(goodBrain, mutationAmount)
+            #     print("Mutation amount ", str(mutationAmount))
+            #     noChange = noChange + 0.2
+            # else:
+            mutationAmount = max(0.1/(((genNum+1-x/80))/28), 0.01)
+            print("mutation amount", mutationAmount)
+            brain = mutateBrain(goodBrain, mutationAmount)
+            # noChange = 0
 
-            score = one_player(screen, brain)
+            score = one_player(screen, brain, genNum)
             # amountToMutate = ((highestScoreSoFar/movesLasted)**2)/10
             # amountToMutate = min(amountToMutate, 0.10)
             # amountToMutate = amountToMutate - ((bonusStrength/7) * 0.7)
@@ -488,6 +566,8 @@ def main():
             if (score >= highestScoreSoFar):
                 goodBrain = brain
             
+            prevPrevHighScore = prevHighScore
+            prevHighScore = highestScoreSoFar
             highestScoreSoFar = max(score, highestScoreSoFar)
 
         # print('Mutating')

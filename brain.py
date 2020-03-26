@@ -55,8 +55,8 @@ import random
 def createBrain():
     model = Sequential()
     # # input_dim is number nodes
-    model.add(Dense(18, input_dim=11, activation='sigmoid'))
-    # model.add(Dense(18, activation='sigmoid'))
+    model.add(Dense(8, input_dim=17, activation='sigmoid'))
+    model.add(Dense(8, activation='sigmoid'))
     model.add(Dense(4, activation='softmax'))
 
     return model
@@ -69,7 +69,8 @@ def networkThink(model, snakeDirection, dWall, dFood, dSnake):
     snakeDirectionNormalized = (snakeDirection / 2) - 1
     # print("snakeDirectionNormalized:", str(snakeDirectionNormalized))
     #model, distaceToFood, distanceToFood, distanceToSelf):
-    inputs = numpy.array([[snakeDirectionNormalized, dWall[0],dWall[1],dWall[2],dWall[3],dFood[0],dFood[1], dSnake[0], dSnake[1], dSnake[2], dSnake[3]]])
+    # print('' + str(snakeDirection), ":", str(dWall[0]), ":", str(dWall[1]), ":", str(dWall[2]), ":", str(dWall[3]), ":", str(dSnake[0]), ":", str(dSnake[1]), ":", str(dSnake[2]), ":", str(dSnake[3]))
+    inputs = numpy.array([[snakeDirectionNormalized, dWall[0],dWall[1],dWall[2],dWall[3], dWall[4], dWall[5], dWall[6], dWall[7], dFood[0],dFood[1],dFood[2], dFood[3], dSnake[0], dSnake[1], dSnake[2], dSnake[3]]])
 
     predictions = model.predict(inputs)
     # print("1" + predictions)
